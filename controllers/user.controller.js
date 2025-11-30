@@ -73,3 +73,38 @@ export const getUserProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  const { name, location, bio, website, avatar } = req.body;
+
+  try {
+    const user = await User.findById(req.user._id); // req.user comes from protect
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (name !== undefined) user.name = name;
+    if (location !== undefined) user.location = location;
+    if (bio !== undefined) user.bio = bio;
+    if (website !== undefined) user.website = website;
+    if (avatar !== undefined) user.avatar = avatar; // for now a URL string
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      avatar: updatedUser.avatar,
+      bio: updatedUser.bio,
+      location: updatedUser.location,
+      website: updatedUser.website,
+      createdAt: updatedUser.createdAt,
+      token: generateToken(updatedUser._id), // if you want fresh token
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
