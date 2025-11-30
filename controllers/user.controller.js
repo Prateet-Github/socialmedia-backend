@@ -31,6 +31,7 @@ export const registerUser = async (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      createdAt: user.createdAt,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -49,6 +50,7 @@ export const loginUser = async (req, res) => {
         name: user.name,
         username: user.username,
         email: user.email,
+        createdAt: user.createdAt,
         token: generateToken(user._id),
       });
     } else {
