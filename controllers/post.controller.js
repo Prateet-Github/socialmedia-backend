@@ -38,6 +38,21 @@ export const createPost = async (req, res) => {
   }
 };
 
+export const getPostsByUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const posts = await Post.find({ user: userId })
+      .populate("user", "username name avatar")
+      .sort({ createdAt: -1 });
+
+    res.json(posts);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getFeedPosts = async (req, res) => {
   try {
     const posts = await Post.find()
