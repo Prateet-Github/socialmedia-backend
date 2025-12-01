@@ -130,11 +130,13 @@ export const updateProfile = async (req, res) => {
 export const getPublicUserProfile = async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })
-      .select("-password"); // hide private data
+      .select("-password");
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const posts = await Post.find({ user: user._id }).sort({ createdAt: -1 });
+    const posts = await Post.find({ user: user._id })
+      .populate("user", "name username avatar")
+      .sort({ createdAt: -1 });
 
     res.json({ user, posts });
   } catch (error) {
