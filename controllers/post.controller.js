@@ -37,3 +37,16 @@ export const createPost = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getFeedPosts = async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate("user", "name username avatar")
+      .sort({ createdAt: -1 }); // newest first
+
+    res.json(posts);
+  } catch (error) {
+    console.error("Get feed error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
