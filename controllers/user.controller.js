@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+import cloudinary from '../configs/cloudinary.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -75,20 +76,34 @@ export const getUserProfile = async (req, res) => {
 };
 
 export const updateProfile = async (req, res) => {
-  const { name, location, bio, website, avatar } = req.body;
-
   try {
-    const user = await User.findById(req.user._id); // req.user comes from protect
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (name !== undefined) user.name = name;
-    if (location !== undefined) user.location = location;
-    if (bio !== undefined) user.bio = bio;
-    if (website !== undefined) user.website = website;
-    if (avatar !== undefined) user.avatar = avatar; // for now a URL string
+    // Update text fields
+    if (req.body.name !== undefined) user.name = req.body.name;
+    if (req.body.location !== undefined) user.location = req.body.location;
+    if (req.body.bio !== undefined) user.bio = req.body.bio;
+    if (req.body.website !== undefined) user.website = req.body.website;
+
+    // Handle avatar file upload if exists
+    if (req.file) {
+      const uploaded = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "avatars" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+
+      user.avatar = uploaded.secure_url;
+    }
 
     const updatedUser = await user.save();
 
@@ -102,9 +117,11 @@ export const updateProfile = async (req, res) => {
       location: updatedUser.location,
       website: updatedUser.website,
       createdAt: updatedUser.createdAt,
-      token: generateToken(updatedUser._id), // if you want fresh token
+      token: generateToken(updatedUser._id),
     });
+
   } catch (error) {
+    console.error("Update Profile Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
