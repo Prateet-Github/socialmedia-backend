@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import cloudinary from '../configs/cloudinary.js';
+import Post from "../models/post.model.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -122,6 +123,21 @@ export const updateProfile = async (req, res) => {
 
   } catch (error) {
     console.error("Update Profile Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPublicUserProfile = async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username })
+      .select("-password"); // hide private data
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const posts = await Post.find({ user: user._id }).sort({ createdAt: -1 });
+
+    res.json({ user, posts });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
