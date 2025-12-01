@@ -143,3 +143,23 @@ export const getPublicUserProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const searchUsers = async (req, res) => {
+  try {
+    const  query  = req.query.q;
+    if (!query) return res.json([]);
+
+    const users = await User.find({
+      $or: [
+        { username: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } }
+      ]
+    }).select("name username avatar");
+    
+    res.json(users);
+    
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+    
+  }
+}
