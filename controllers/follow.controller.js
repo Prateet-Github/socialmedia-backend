@@ -1,6 +1,5 @@
 import User from "../models/user.model.js";
 
-// POST /api/users/:username/follow
 export const followUser = async (req, res) => {
   try {
     const { username } = req.params;
@@ -16,7 +15,6 @@ export const followUser = async (req, res) => {
       return res.status(400).json({ message: "You cannot follow yourself" });
     }
 
-    // already following?
     const isAlreadyFollowing = targetUser.followers.some(
       (id) => id.toString() === currentUserId.toString()
     );
@@ -25,7 +23,6 @@ export const followUser = async (req, res) => {
       return res.status(400).json({ message: "Already following this user" });
     }
 
-    // add to following/followers
     await User.findByIdAndUpdate(currentUserId, {
       $addToSet: { following: targetUser._id },
     });
@@ -34,19 +31,15 @@ export const followUser = async (req, res) => {
       $addToSet: { followers: currentUserId },
     });
 
+    // ✅ Return populated profile
     const updatedTarget = await User.findById(targetUser._id)
-      .select("username name avatar followers following");
+      .select("username name avatar followers following bio")
+      .populate("followers", "name username avatar")
+      .populate("following", "name username avatar");
 
     res.json({
       message: "Followed successfully",
-      user: {
-        _id: updatedTarget._id,
-        username: updatedTarget.username,
-        name: updatedTarget.name,
-        avatar: updatedTarget.avatar,
-        followersCount: updatedTarget.followers.length,
-        followingCount: updatedTarget.following.length,
-      },
+      user: updatedTarget, // ✅ Full updated profile
     });
   } catch (error) {
     console.error("Follow error:", error);
@@ -54,7 +47,6 @@ export const followUser = async (req, res) => {
   }
 };
 
-// POST /api/users/:username/unfollow
 export const unfollowUser = async (req, res) => {
   try {
     const { username } = req.params;
@@ -78,19 +70,15 @@ export const unfollowUser = async (req, res) => {
       $pull: { followers: currentUserId },
     });
 
+    // ✅ Return populated profile
     const updatedTarget = await User.findById(targetUser._id)
-      .select("username name avatar followers following");
+      .select("username name avatar followers following bio")
+      .populate("followers", "name username avatar")
+      .populate("following", "name username avatar");
 
     res.json({
       message: "Unfollowed successfully",
-      user: {
-        _id: updatedTarget._id,
-        username: updatedTarget.username,
-        name: updatedTarget.name,
-        avatar: updatedTarget.avatar,
-        followersCount: updatedTarget.followers.length,
-        followingCount: updatedTarget.following.length,
-      },
+      user: updatedTarget, // ✅ Full updated profile
     });
   } catch (error) {
     console.error("Unfollow error:", error);

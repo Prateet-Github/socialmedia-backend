@@ -78,7 +78,11 @@ export const loginUser = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    const user = await User.findById(req.user._id)
+      .select("-password")
+      .populate("followers", "name username avatar")
+      .populate("following", "name username avatar");
+      
     if (user) {
       res.json(user);
     } else {
@@ -145,7 +149,9 @@ export const updateProfile = async (req, res) => {
 export const getPublicUserProfile = async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })
-      .select("-password");
+      .select("-password")
+      .populate("followers", "name username avatar")  // ✅ Add this
+      .populate("following", "name username avatar"); // ✅ Add this
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
