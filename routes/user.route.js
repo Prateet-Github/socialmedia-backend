@@ -4,14 +4,22 @@ import  protect  from '../middlewares/user.middleware.js';
 import upload from '../middlewares/multer.middleware.js';
 import { getPublicUserProfile } from '../controllers/user.controller.js';
 import { searchUsers } from '../controllers/user.controller.js';
+import { followUser, unfollowUser, getFollowers, getFollowing } from '../controllers/follow.controller.js';
 
 const router = express.Router();
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/profile', protect, getUserProfile);
+
 router.put('/update-profile', protect,upload.single('avatar'), updateProfile);
 router.get("/public/:username", getPublicUserProfile);
 router.get("/search", protect, searchUsers);
+
+router.post("/:username/follow", protect, followUser);
+router.post("/:username/unfollow", protect, unfollowUser);
+
+router.get("/:username/followers", getFollowers);
+router.get("/:username/following", getFollowing);
 
 export default router;
