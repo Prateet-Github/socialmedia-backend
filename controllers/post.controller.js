@@ -65,3 +65,67 @@ export const getFeedPosts = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Like a post
+export const likePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user._id;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check if already liked
+    const isLiked = post.likes.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    if (isLiked) {
+      return res.status(400).json({ message: "Post already liked" });
+    }
+
+    // Add like
+    post.likes.push(userId);
+    await post.save();
+
+    res.json({ message: "Post liked", likes: post.likes });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Unlike a post
+export const unlikePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user._id;
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check if not liked
+    const isLiked = post.likes.some(
+      (id) => id.toString() === userId.toString()
+    );
+
+    if (!isLiked) {
+      return res.status(400).json({ message: "Post not liked yet" });
+    }
+
+    // Remove like
+    post.likes = post.likes.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+    await post.save();
+
+    res.json({ message: "Post unliked", likes: post.likes });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
