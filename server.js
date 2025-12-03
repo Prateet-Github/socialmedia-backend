@@ -4,6 +4,8 @@ import connectDB from './configs/db.js';
 import userRoutes from './routes/user.route.js';
 import postRoutes from './routes/post.route.js';
 import cors from 'cors';
+import http from 'http';
+import { socketHandler } from './socket/socketHandler.js';
 
 dotenv.config();
 connectDB();
@@ -15,13 +17,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send('Hello from social media backend!');
 });
 
 app.use('/api/users', userRoutes);
 app.use('/api/posts',postRoutes)
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+socketHandler(server);
+
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
