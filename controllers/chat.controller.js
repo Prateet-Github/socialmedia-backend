@@ -26,3 +26,11 @@ export const createChat = async (req, res) => {
     
   }
 };
+
+export const getMyChats = async (req, res) => {
+  const chats = await Chat.find({ users: req.user._id })
+    .populate("users", "name username avatar")
+    .populate("lastMessage");
+
+  res.json(chats);
+};
