@@ -2,10 +2,12 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './configs/db.js';
 import userRoutes from './routes/user.route.js';
+import chatRoutes from './routes/chat.route.js';
 import postRoutes from './routes/post.route.js';
 import cors from 'cors';
 import http from 'http';
 import { socketHandler } from './socket/socketHandler.js';
+
 
 dotenv.config();
 connectDB();
@@ -22,7 +24,8 @@ app.get('/', (_req, res) => {
 });
 
 app.use('/api/users', userRoutes);
-app.use('/api/posts',postRoutes)
+app.use('/api/posts', postRoutes);
+app.use('/api/chats', chatRoutes);
 
 const server = http.createServer(app);
 socketHandler(server);
