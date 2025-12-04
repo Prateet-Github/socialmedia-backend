@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import connectDB from './configs/db.js';
 import userRoutes from './routes/user.route.js';
 import chatRoutes from './routes/chat.route.js';
+import messageRoutes from './routes/message.route.js';
 import postRoutes from './routes/post.route.js';
 import cors from 'cors';
 import http from 'http';
@@ -26,6 +27,7 @@ app.get('/', (_req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/messages', messageRoutes);
 
 const server = http.createServer(app);
 socketHandler(server);
