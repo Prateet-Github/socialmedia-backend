@@ -1,9 +1,6 @@
 // socket/socketHandler.js
 import { Server } from "socket.io";
-import Chat from "../models/chat.model.js";
-import Message from "../models/message.model.js";
 
-// Stores online users (userId → socketId)
 let onlineUsers = new Map();
 
 export const socketHandler = (server) => {
@@ -12,75 +9,38 @@ export const socketHandler = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("🟢 New client connected:", socket.id);
+    console.log("Client connected:", socket.id);
 
-    // -----------------------------
-    // 1️⃣ USER ONLINE STATUS TRACKING
-    // -----------------------------
+    // 1️ USER ONLINE TRACKING
     socket.on("join", (userId) => {
       onlineUsers.set(userId, socket.id);
       console.log("👤 User joined:", userId);
     });
 
-    // -----------------------------
-    // 2️⃣ USER JOINS CHAT ROOM
-    // -----------------------------
+    // 2️ JOIN CHAT ROOM
     socket.on("join-chat", ({ chatId, userId }) => {
       socket.join(chatId);
-      console.log(`💬 User ${userId} joined chat room ${chatId}`);
+      console.log(`User ${userId} joined room ${chatId}`);
     });
 
-    // -----------------------------
-    // 3️⃣ SEND MESSAGE → SAVE + BROADCAST
-    // -----------------------------
-    socket.on(
-      "message:send",
-      async ({ chatId, senderId, receiverId, text, media }) => {
-        try {
-          // Save message in DB
-          const message = await Message.create({
-            chatId,
-            sender: senderId,
-            text: text || "",
-            media: media || [],
-          });
+    // 3️ MESSAGE BROADCAST (NO SAVING IN SOCKET)
+    socket.on("message:send", ({ message }) => {
+      if (!message || !message.chatId) return;
 
-          // Update chat.lastMessage
-          await Chat.findByIdAndUpdate(chatId, {
-            lastMessage: message._id,
-          });
+      console.log("Broadcasting message to room:", message.chatId);
 
-          // Populate sender for frontend UI
-          const fullMessage = await message.populate(
-            "sender",
-            "name username avatar"
-          );
+      // Send message to everyone in the chat room
+      io.to(message.chatId).emit("message:new", message);
+    });
 
-          // 3.1 Broadcast to everyone in the chat room
-          io.to(chatId).emit("message:new", fullMessage);
-
-          // 3.2 Send ack to sender
-          socket.emit("message:sent", fullMessage);
-
-          console.log("📩 Message delivered in chat:", chatId);
-        } catch (err) {
-          console.error("❌ message:send error", err);
-          socket.emit("message:error", { message: err.message });
-        }
-      }
-    );
-
-    // -----------------------------
-    // 4️⃣ HANDLE DISCONNECT
-    // -----------------------------
+    // 4️ DISCONNECT HANDLER
     socket.on("disconnect", () => {
-      console.log("🔴 Socket disconnected:", socket.id);
+      console.log("Disconnected:", socket.id);
 
-      for (const [userId, sockId] of onlineUsers.entries()) {
-        if (sockId === socket.id) {
+      for (const [userId, socketId] of onlineUsers.entries()) {
+        if (socketId === socket.id) {
           onlineUsers.delete(userId);
-          console.log("⚠️ Removed user from online list:", userId);
-          break;
+          console.log("Removed user:", userId);
         }
       }
     });
