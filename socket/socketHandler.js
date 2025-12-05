@@ -1,7 +1,8 @@
 // socket/socketHandler.js
 import { Server } from "socket.io";
+import User from "../models/user.model.js";
 
-let onlineUsers = new Map();
+let onlineUsers = new Map(); // userId → socketId
 
 export const socketHandler = (server) => {
   const io = new Server(server, {
@@ -11,36 +12,97 @@ export const socketHandler = (server) => {
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    // 1️ USER ONLINE TRACKING
+    // ─────────────────────────────────────────────
+    // 1) USER ONLINE TRACKING
+    // ─────────────────────────────────────────────
     socket.on("join", (userId) => {
       onlineUsers.set(userId, socket.id);
       console.log("👤 User joined:", userId);
     });
 
-    // 2️ JOIN CHAT ROOM
+    // ─────────────────────────────────────────────
+    // 2) JOIN CHAT ROOM
+    // ─────────────────────────────────────────────
     socket.on("join-chat", ({ chatId, userId }) => {
       socket.join(chatId);
       console.log(`User ${userId} joined room ${chatId}`);
     });
 
-    // 3️ MESSAGE BROADCAST (NO SAVING IN SOCKET)
+    // ─────────────────────────────────────────────
+    // 3) CHAT MESSAGE SEND → BROADCAST
+    // ─────────────────────────────────────────────
     socket.on("message:send", ({ message }) => {
       if (!message || !message.chatId) return;
-
-      console.log("Broadcasting message to room:", message.chatId);
-
-      // Send message to everyone in the chat room
       io.to(message.chatId).emit("message:new", message);
+      console.log("💬 message sent → room:", message.chatId);
     });
 
-    // 4️ DISCONNECT HANDLER
-    socket.on("disconnect", () => {
-      console.log("Disconnected:", socket.id);
+    // ─────────────────────────────────────────────
+    // 4) CALL: OFFER (Caller → Callee)
+    // ─────────────────────────────────────────────
+    socket.on("call:offer", async ({ toUserId, offer, callerId }) => {
+      const receiverSocket = onlineUsers.get(toUserId);
+      if (!receiverSocket) {
+        console.log("❌ Receiver offline");
+        return;
+      }
 
-      for (const [userId, socketId] of onlineUsers.entries()) {
-        if (socketId === socket.id) {
+      const callerUser = await User.findById(callerId).select("name username avatar");
+
+      io.to(receiverSocket).emit("call:offer", {
+        offer,
+        callerId,
+        callerSocketId: socket.id,       // ← IMPORTANT
+        callerName: callerUser?.name || "Unknown",
+        callerAvatar: callerUser?.avatar || null,
+        callerUsername: callerUser?.username || null,
+      });
+
+      console.log(`📞 Offer sent from ${callerId} → user ${toUserId}`);
+    });
+
+    // ─────────────────────────────────────────────
+    // 5) CALL: ANSWER (Callee → Caller)
+    // ─────────────────────────────────────────────
+    socket.on("call:answer", ({ toSocketId, answer }) => {
+      io.to(toSocketId).emit("call:answer", {
+        answer,
+        receiverSocketId: socket.id   // ← This is critical (callee ID)
+      });
+
+      console.log(`📞 Answer sent → socket ${toSocketId}`);
+    });
+
+    // ─────────────────────────────────────────────
+    // 6) ICE EXCHANGE
+    // ─────────────────────────────────────────────
+    socket.on("call:ice-candidate", ({ toSocketId, candidate }) => {
+      if (candidate) {
+        io.to(toSocketId).emit("call:ice-candidate", candidate);
+      }
+    });
+
+    // ─────────────────────────────────────────────
+    // 7) CALL END (Either side → Other side)
+    // ─────────────────────────────────────────────
+    socket.on("call:end", ({ toSocketId }) => {
+      if (toSocketId) {
+        io.to(toSocketId).emit("call:end");
+      }
+      console.log("❌ Call ended by socket:", socket.id);
+    });
+
+    // ─────────────────────────────────────────────
+    // 8) DISCONNECT
+    // ─────────────────────────────────────────────
+    socket.on("disconnect", () => {
+      console.log("🔴 Disconnected:", socket.id);
+
+      for (const [userId, sockId] of onlineUsers.entries()) {
+        if (sockId === socket.id) {
           onlineUsers.delete(userId);
-          console.log("Removed user:", userId);
+          console.log("⚠️ Removed user:", userId);
+          break;
         }
       }
     });
