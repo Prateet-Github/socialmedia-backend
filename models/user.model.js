@@ -45,6 +45,12 @@ emailOtpExpires: {
 lastOtpSentAt: {
   type: Date, // for rate limiting resend
 },
+resetOtp: {
+  type: String
+},
+resetOtpExpires: {
+  type: Date
+},
     avatar: {
       type: String,
       default: "", // Cloudinary URL

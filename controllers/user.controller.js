@@ -326,3 +326,81 @@ export const resendOtp = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "No user found" });
+
+    // generate new otp
+    const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    user.resetOtp = hashedOtp;
+    user.resetOtpExpires = Date.now() + 1000 * 60 * 10;
+    await user.save();
+
+    // send email
+    await sendOtpMail({ to: user.email, otp, username: user.username });
+
+    return res.status(200).json({ message: "Reset OTP sent to Gmail" });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email })
+      .select("+resetOtp +resetOtpExpires");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.resetOtp || !user.resetOtpExpires)
+      return res.status(400).json({ message: "OTP not requested" });
+
+    if (Date.now() > user.resetOtpExpires)
+      return res.status(400).json({ message: "OTP expired" });
+
+    const isValid = await bcrypt.compare(otp, user.resetOtp);
+    if (!isValid) return res.status(400).json({ message: "Invalid OTP" });
+
+    return res.status(200).json({ message: "OTP verified" });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword)
+      return res.status(400).json({ message: "Missing fields" });
+
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = newPassword; // will hash in pre-save
+    user.resetOtp = undefined;
+    user.resetOtpExpires = undefined;
+
+    await user.save();
+
+    return res.status(200).json({ message: "Password updated" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
