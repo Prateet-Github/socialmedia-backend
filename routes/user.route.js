@@ -5,6 +5,8 @@ import upload from '../middlewares/multer.middleware.js';
 import { getPublicUserProfile } from '../controllers/user.controller.js';
 import { searchUsers } from '../controllers/user.controller.js';
 import { followUser, unfollowUser, getFollowers, getFollowing } from '../controllers/follow.controller.js';
+import { verifyEmail } from '../controllers/user.controller.js';
+import { resendOtp } from '../controllers/user.controller.js';
 
 const router = express.Router();
 
@@ -21,5 +23,8 @@ router.post("/:username/unfollow", protect, unfollowUser);
 
 router.get("/:username/followers", getFollowers);
 router.get("/:username/following", getFollowing);
+
+router.post("/email-verification", verifyEmail);
+router.post("/resend-otp", resendOtp);
 
 export default router;

@@ -26,7 +26,25 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: 6,
+      select: false,
     },
+    emailVerified: {
+  type: Boolean,
+  default: false,
+},
+
+emailOtp: {
+  type: String, // hashed OTP
+  select: false,
+},
+
+emailOtpExpires: {
+  type: Date,   // expiry
+},
+
+lastOtpSentAt: {
+  type: Date, // for rate limiting resend
+},
     avatar: {
       type: String,
       default: "", // Cloudinary URL
@@ -74,6 +92,11 @@ userSchema.pre('save', async function () {
 // Compare password for login
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Compare otp
+userSchema.methods.matchEmailOtp = async function (enteredOtp) {
+  return await bcrypt.compare(enteredOtp, this.emailOtp);
 };
 
 export default mongoose.model("User", userSchema);
