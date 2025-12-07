@@ -85,44 +85,65 @@ export const socketHandler = (server) => {
     // ─────────────────────────────────────────────
     // 7) CALL END (Either side → Other side)
     // ─────────────────────────────────────────────
-socket.on("call:end", ({ toSocketId }) => {
-  if (toSocketId) {
-    io.to(toSocketId).emit("call:end", {
-      fromSocketId: socket.id,   // ✔ IMPORTANT
-    });
-  }
+    socket.on("call:end", ({ toSocketId }) => {
+      if (toSocketId) {
+        io.to(toSocketId).emit("call:end", {
+          fromSocketId: socket.id,   // ✔ IMPORTANT
+        });
+      }
 
-  console.log("❌ Video call ended by socket:", socket.id);
-});
+      console.log("❌ Video call ended by socket:", socket.id);
+    });
 
     //----------------------------------------
-// VOICE CALL SIGNALING
-//----------------------------------------
+    // VOICE CALL SIGNALING
+    //----------------------------------------
 
-socket.on("voice:offer", ({ toUserId, offer, callerId }) => {
-  const receiverSocket = onlineUsers.get(toUserId);
-  if (!receiverSocket) return;
+    // 🔥 FIX: voice:offer - Add caller info
+    socket.on("voice:offer", async ({ toUserId, offer, callerId }) => {
+      const receiverSocket = onlineUsers.get(toUserId);
+      if (!receiverSocket) {
+        console.log("❌ Voice call receiver offline:", toUserId);
+        return;
+      }
 
-  io.to(receiverSocket).emit("voice:offer", {
-    offer,
-    callerSocketId: socket.id,
-    callerId,
-  });
-});
+      // 🔥 FETCH CALLER INFO (same as video call)
+      const callerUser = await User.findById(callerId).select("name username avatar");
 
-socket.on("voice:answer", ({ toSocketId, answer }) => {
-  io.to(toSocketId).emit("voice:answer", { answer });
-});
+      io.to(receiverSocket).emit("voice:offer", {
+        offer,
+        callerId,
+        callerSocketId: socket.id,  // 🔥 CRITICAL
+        callerName: callerUser?.name || "Unknown",
+        callerAvatar: callerUser?.avatar || null,
+      });
 
-socket.on("voice:ice-candidate", ({ toSocketId, candidate }) => {
-  if (candidate) {
-    io.to(toSocketId).emit("voice:ice-candidate", candidate);
-  }
-});
+      console.log(`🎙️ Voice offer sent from ${callerId} → user ${toUserId}`);
+    });
 
-socket.on("voice:end", ({ toSocketId }) => {
-  io.to(toSocketId).emit("voice:end", { fromSocketId: socket.id });
-});
+    // 🔥 FIX: voice:answer - Add fromSocketId
+    socket.on("voice:answer", ({ toSocketId, answer }) => {
+      io.to(toSocketId).emit("voice:answer", {
+        answer,
+        fromSocketId: socket.id,  // 🔥 CRITICAL - caller needs this
+      });
+
+      console.log(`🎙️ Voice answer sent → socket ${toSocketId}`);
+    });
+
+    socket.on("voice:ice-candidate", ({ toSocketId, candidate }) => {
+      if (candidate) {
+        io.to(toSocketId).emit("voice:ice-candidate", candidate);
+        console.log(`🧊 Voice ICE candidate sent → ${toSocketId}`);
+      }
+    });
+
+    socket.on("voice:end", ({ toSocketId }) => {
+      if (toSocketId) {
+        io.to(toSocketId).emit("voice:end", { fromSocketId: socket.id });
+        console.log(`❌ Voice call ended by ${socket.id} → ${toSocketId}`);
+      }
+    });
 
     // ─────────────────────────────────────────────
     // 8) DISCONNECT

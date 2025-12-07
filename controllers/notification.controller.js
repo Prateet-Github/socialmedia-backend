@@ -23,7 +23,7 @@ export const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user._id })
       .populate("fromUser", "name username avatar")
-      .populate("post", "_id")
+      .populate("post", "_id media")
       .populate("comment", "_id")
       .sort({ createdAt: -1 });
 
