@@ -9,6 +9,7 @@ import cors from 'cors';
 import http from 'http';
 import { socketHandler } from './socket/socketHandler.js';
 import commentRoutes from './routes/comment.route.js';
+import notificationRoutes from './routes/notification.route.js';
 
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const server = http.createServer(app);
 socketHandler(server);

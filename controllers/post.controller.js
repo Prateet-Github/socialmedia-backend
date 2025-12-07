@@ -1,5 +1,6 @@
 import Post from '../models/post.model.js';
 import cloudinary from '../configs/cloudinary.js';
+import { createNotification } from './notification.controller.js';
 
 export const createPost = async (req, res) => {
   try {
@@ -91,6 +92,16 @@ export const likePost = async (req, res) => {
     post.likes.push(userId);
     await post.save();
 
+    // Create notification
+    if (post.user._id.toString() !== userId.toString()) {
+      await createNotification({
+        userId: post.user._id,   // receiver (post owner)
+        fromUserId: userId,      // actor
+        type: "like",
+        postId: post._id,
+      });
+    }
+    
     res.json({ message: "Post liked", likes: post.likes });
   } catch (error) {
     res.status(500).json({ message: error.message });

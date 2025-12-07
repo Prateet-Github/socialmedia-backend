@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import { createNotification } from "./notification.controller.js";
 
 export const followUser = async (req, res) => {
   try {
@@ -36,6 +37,14 @@ export const followUser = async (req, res) => {
       .select("username name avatar followers following bio")
       .populate("followers", "name username avatar")
       .populate("following", "name username avatar");
+
+      if (targetUser._id.toString() !== req.user._id.toString()) {
+  await createNotification({
+    userId: targetUser._id,
+    fromUserId: req.user._id,
+    type: "follow",
+  });
+}
 
     res.json({
       message: "Followed successfully",

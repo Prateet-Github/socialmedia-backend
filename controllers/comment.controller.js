@@ -1,5 +1,6 @@
 import Comment from "../models/comment.model.js";
 import Post from "../models/post.model.js";
+import { createNotification } from "./notification.controller.js";
 
 export const createComment = async (req, res) => {
   try {
@@ -20,6 +21,15 @@ export const createComment = async (req, res) => {
       user: req.user._id,
       content,
     });
+
+       await createNotification({
+      userId: post.user,          // owner
+      fromUserId: req.user._id,   // actor
+      type: "comment",
+      postId: post._id,
+      commentId: comment._id,
+    });
+
 
     res.status(201).json(comment);
 
